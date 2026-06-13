@@ -7,7 +7,6 @@ This project includes data preprocessing, feature engineering, multiple ML model
 
 ## 🚀 Live Demo
 https://retail-demand-forecasting-ml-system-9qtog2br94sgtu3f4j8gz5.streamlit.app/
-
 ---
 
 ## 📊 Project Overview
