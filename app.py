@@ -26,36 +26,21 @@ except:
 # =========================
 # TITLE
 # =========================
-st.title("📦 Multi-Product Retail Intelligence System")
-st.markdown("Production-grade deterministic inventory + demand system")
+st.title("📦 Retail Demand + Smart Inventory System")
+st.markdown("Deterministic + Input-aware inventory intelligence")
 
 st.divider()
 
 # =========================
-# PRODUCT SELECTION (MULTI PRODUCT)
-# =========================
-product = st.selectbox(
-    "📦 Select Product",
-    ["Product A", "Product B", "Product C"]
-)
-
-# preset realistic variations (simulating catalog)
-product_profiles = {
-    "Product A": {"mrp": 120, "vis": 0.10, "wt": 12},
-    "Product B": {"mrp": 250, "vis": 0.05, "wt": 20},
-    "Product C": {"mrp": 60,  "vis": 0.20, "wt": 8}
-}
-
-profile = product_profiles[product]
-
-# =========================
-# INPUTS (PRE-FILLED BUT EDITABLE)
+# INPUTS
 # =========================
 st.subheader("🧾 Input Features")
 
-item_mrp = st.slider("Item MRP", 10.0, 300.0, float(profile["mrp"]))
-item_visibility = st.slider("Item Visibility", 0.0, 0.3, float(profile["vis"]))
-item_weight = st.slider("Item Weight", 1.0, 30.0, float(profile["wt"]))
+item_mrp = st.slider("Item MRP", 10.0, 300.0, 120.0)
+item_visibility = st.slider("Item Visibility", 0.0, 0.3, 0.05)
+item_weight = st.slider("Item Weight", 1.0, 30.0, 10.0)
+
+st.divider()
 
 # =========================
 # RUN MODEL
@@ -63,7 +48,7 @@ item_weight = st.slider("Item Weight", 1.0, 30.0, float(profile["wt"]))
 if st.button("🚀 Predict & Analyze"):
 
     # -------------------------
-    # INPUT PREPARATION
+    # PREPROCESS INPUT
     # -------------------------
     input_df = pd.DataFrame([{
         "Item_MRP": item_mrp,
@@ -78,7 +63,7 @@ if st.button("🚀 Predict & Analyze"):
         input_encoded = input_df
 
     # -------------------------
-    # PREDICTION (DETERMINISTIC)
+    # PREDICTION
     # -------------------------
     prediction = model.predict(input_encoded)[0]
     prediction = max(float(prediction), 1)
@@ -86,43 +71,53 @@ if st.button("🚀 Predict & Analyze"):
     revenue = prediction * item_mrp
 
     # =========================
-    # DEMAND ENGINE
+    # DEMAND ESTIMATION
     # =========================
-    lead_time_days = 7
+    expected_demand = (prediction / 30) * 7
 
-    expected_demand = (prediction / 30) * lead_time_days
+    # =========================
+    # 🔥 FIXED DYNAMIC STOCK LOGIC (NO RANDOMNESS)
+    # =========================
+    input_factor = (
+        (item_mrp / 300) * 0.4 +
+        (item_visibility / 0.3) * 0.3 +
+        (item_weight / 30) * 0.3
+    )
 
-    # deterministic stock (NO RANDOMNESS)
-    current_stock = int(expected_demand * 1.05)
+    # convert to meaningful range (0.75 to 1.30)
+    demand_multiplier = 0.75 + input_factor
 
+    current_stock = int(expected_demand * demand_multiplier)
+
+    # =========================
+    # METRICS
+    # =========================
     coverage_ratio = current_stock / expected_demand
-
-    # =========================
-    # SMOOTH RISK ENGINE (NO HARD THRESHOLDS)
-    # =========================
-    risk_score = abs(1 - coverage_ratio)
-
-    if risk_score < 0.1:
-        status = "🟢 OPTIMAL STOCK"
-        color = "#10B981"
-        risk = "LOW"
-
-    elif risk_score < 0.25:
-        status = "🟡 NEAR OPTIMAL STOCK"
-        color = "#FBBF24"
-        risk = "MEDIUM"
-
-    else:
-        status = "🟠 IMBALANCED STOCK"
-        color = "#F97316"
-        risk = "HIGH"
 
     reorder_point = expected_demand * 1.2
 
     # =========================
-    # KPI DASHBOARD
+    # DECISION ENGINE (BALANCED)
     # =========================
-    st.subheader("📊 Business Dashboard")
+    if coverage_ratio < 0.85:
+        status = "🔴 STOCKOUT RISK"
+        color = "#EF4444"
+        risk = "HIGH"
+
+    elif coverage_ratio <= 1.15:
+        status = "🟢 OPTIMAL STOCK"
+        color = "#10B981"
+        risk = "LOW"
+
+    else:
+        status = "🟠 OVERSTOCK RISK"
+        color = "#F97316"
+        risk = "MEDIUM"
+
+    # =========================
+    # DASHBOARD
+    # =========================
+    st.subheader("📊 Results Dashboard")
 
     c1, c2, c3, c4 = st.columns(4)
 
@@ -134,7 +129,7 @@ if st.button("🚀 Predict & Analyze"):
     st.divider()
 
     # =========================
-    # INVENTORY METRICS
+    # INVENTORY INSIGHTS
     # =========================
     st.subheader("📦 Inventory Intelligence")
 
@@ -169,7 +164,7 @@ if st.button("🚀 Predict & Analyze"):
     fig = px.bar(
         x=["MRP", "Visibility", "Weight"],
         y=[item_mrp, item_visibility * 1000, item_weight],
-        title="Feature Influence"
+        title="Input Feature Influence"
     )
 
     st.plotly_chart(fig, use_container_width=True)
