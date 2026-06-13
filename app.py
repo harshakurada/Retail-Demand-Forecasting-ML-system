@@ -20,13 +20,17 @@ model = joblib.load("best_model.pkl")
 columns = joblib.load("columns.pkl")
 
 # =========================
-# UI
+# TITLE
 # =========================
 st.title("📦 Retail Demand + Inventory Intelligence System")
+st.markdown("AI-powered demand forecasting with real inventory decision engine")
 
 st.divider()
 
-st.subheader("🧾 Input Features")
+# =========================
+# INPUTS
+# =========================
+st.subheader("🧾 Product Inputs")
 
 item_mrp = st.slider("Item MRP", 10.0, 300.0, 150.0)
 item_visibility = st.slider("Item Visibility", 0.0, 0.3, 0.05)
@@ -35,9 +39,9 @@ item_weight = st.slider("Item Weight", 1.0, 30.0, 10.0)
 st.divider()
 
 # =========================
-# PREDICTION BUTTON
+# PREDICTION ENGINE
 # =========================
-if st.button("🚀 Run Forecast & Inventory Check"):
+if st.button("🚀 Predict & Analyze Inventory"):
 
     # -------------------------
     # INPUT PREP
@@ -56,61 +60,53 @@ if st.button("🚀 Run Forecast & Inventory Check"):
     # -------------------------
     prediction = model.predict(input_encoded)[0]
 
-    # =========================
-    # BUSINESS METRICS
-    # =========================
     revenue = prediction * item_mrp
 
-    # uncertainty simulation
-    demand_std = prediction * 0.25
-
+    # uncertainty band
+    demand_std = prediction * 0.20
     lower = prediction - demand_std
     upper = prediction + demand_std
 
     # =========================
-    # REALISTIC INVENTORY ENGINE
+    # INVENTORY SIMULATION
     # =========================
 
     lead_time_days = 7
 
-    # simulate current stock (real-world constraint)
+    # realistic stock simulation
     current_stock = np.random.randint(
-        int(prediction * 0.5),
+        max(50, int(prediction * 0.3)),
         int(prediction * 1.8)
     )
 
-    # expected demand during lead time
-    daily_demand = prediction / 30
-    expected_demand_lt = daily_demand * lead_time_days
+    # demand during lead time
+    expected_demand_lt = (prediction / 30) * lead_time_days
 
-    # safety stock (uncertainty buffer)
-    safety_stock = 1.65 * np.std([lower, prediction, upper])
+    # safety buffer
+    safety_stock = 1.65 * demand_std
+
+    # coverage ratio (CORE METRIC)
+    coverage_ratio = current_stock / expected_demand_lt
 
     # reorder point
     reorder_point = expected_demand_lt + safety_stock
 
-    # inventory gap
-    stock_gap = current_stock - expected_demand_lt
-
-    # coverage ratio
-    coverage_ratio = current_stock / expected_demand_lt
-
     # =========================
-    # DECISION ENGINE
+    # FINAL DECISION ENGINE (FIXED)
     # =========================
 
-    if stock_gap < 0:
-        status = "🔴 CRITICAL STOCKOUT RISK"
+    if coverage_ratio < 1:
+        status = "🔴 STOCKOUT RISK (NOT OPTIMAL)"
         risk = "HIGH"
         color = "#EF4444"
 
-    elif coverage_ratio < 1.2:
-        status = "🟡 LOW STOCK - REPLENISH SOON"
+    elif coverage_ratio > 2.5:
+        status = "🟠 OVERSTOCK RISK (NOT OPTIMAL)"
         risk = "MEDIUM"
         color = "#F59E0B"
 
     else:
-        status = "🟢 STOCK LEVEL OPTIMAL"
+        status = "🟢 OPTIMAL STOCK LEVEL"
         risk = "LOW"
         color = "#10B981"
 
@@ -124,20 +120,20 @@ if st.button("🚀 Run Forecast & Inventory Check"):
     c1.metric("📦 Predicted Demand", f"{prediction:.0f}")
     c2.metric("💰 Revenue", f"₹ {revenue:,.0f}")
     c3.metric("📦 Current Stock", f"{current_stock}")
-    c4.metric("⚠️ Risk", risk)
+    c4.metric("⚠️ Risk Level", risk)
 
     st.divider()
 
     # =========================
-    # INVENTORY INTELLIGENCE
+    # INVENTORY METRICS
     # =========================
     st.subheader("📦 Inventory Intelligence Engine")
 
     i1, i2, i3 = st.columns(3)
 
-    i1.metric("📍 Reorder Point", f"{reorder_point:.0f}")
+    i1.metric("📍 Coverage Ratio", f"{coverage_ratio:.2f}")
     i2.metric("📉 Expected Demand (7D)", f"{expected_demand_lt:.0f}")
-    i3.metric("📊 Coverage Ratio", f"{coverage_ratio:.2f}")
+    i3.metric("📦 Reorder Point", f"{reorder_point:.0f}")
 
     st.markdown(
         f"""
