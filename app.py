@@ -60,8 +60,22 @@ if mode == "Single Prediction":
     input_encoded = input_encoded.reindex(columns=columns, fill_value=0)
 
     if st.button("🚀 Predict Sales"):
+        
 
         prediction = model.predict(input_encoded)[0]
+        # 💰 REVENUE IMPACT
+        avg_price = item_mrp
+        revenue = prediction * avg_price
+        # 📊 DEMAND RANGE (UNCERTAINTY SIMULATION)
+        lower_bound = prediction * 0.85
+        upper_bound = prediction * 1.15
+        # 📦 STOCK RECOMMENDATION
+        if prediction < 1000:
+            stock = "LOW STOCK ALERT 📉"
+        elif prediction < 2500:
+            stock = "MODERATE STOCK 📦"
+        else:
+            stock = "HIGH STOCK REQUIRED 📈"
 
         # KPI ROW
         col1, col2, col3 = st.columns(3)
@@ -69,6 +83,8 @@ if mode == "Single Prediction":
         col1.metric("📊 Predicted Sales", f"{prediction:.2f}")
         col2.metric("🏆 Model", "Gradient Boosting")
         col3.metric("📉 RMSE", "1035")
+        col4 = st.columns(1)[0]
+        col4.metric("💰 Revenue Impact", f"₹ {revenue:,.0f}")
 
         st.success(f"Predicted Sales: {prediction:.2f} units")
 
