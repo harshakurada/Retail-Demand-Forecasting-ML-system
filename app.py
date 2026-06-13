@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import joblib
 import plotly.express as px
+import sqlite3
+from datetime import datetime
 
 # =========================
 # CONFIG
@@ -20,12 +22,38 @@ model = joblib.load("best_model.pkl")
 columns = joblib.load("columns.pkl")
 
 # =========================
+# OPTIONAL DB (SAFE INIT)
+# =========================
+conn = sqlite3.connect("inventory.db", check_same_thread=False)
+cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS inventory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_mrp REAL,
+    prediction REAL,
+    stock INTEGER,
+    mode TEXT,
+    timestamp TEXT
+)
+""")
+conn.commit()
+
+# =========================
 # TITLE
 # =========================
 st.title("📦 Retail Demand + Inventory Intelligence System")
-st.markdown("AI-powered demand forecasting with realistic inventory decision engine")
+st.markdown("Enterprise-level ML + Inventory Simulation Dashboard")
 
 st.divider()
+
+# =========================
+# MODE SWITCH
+# =========================
+mode = st.radio(
+    "📊 System Mode",
+    ["Deterministic (Production)", "Simulated (Real-world Variability)"]
+)
 
 # =========================
 # INPUTS
@@ -39,9 +67,9 @@ item_weight = st.slider("Item Weight", 1.0, 30.0, 10.0)
 st.divider()
 
 # =========================
-# PREDICTION
+# RUN PREDICTION
 # =========================
-if st.button("🚀 Run Forecast & Inventory Check"):
+if st.button("🚀 Predict & Analyze"):
 
     # -------------------------
     # INPUT PREP
@@ -56,11 +84,9 @@ if st.button("🚀 Run Forecast & Inventory Check"):
     input_encoded = input_encoded.reindex(columns=columns, fill_value=0)
 
     # -------------------------
-    # MODEL PREDICTION
+    # PREDICTION
     # -------------------------
     prediction = model.predict(input_encoded)[0]
-
-    # ensure no negative prediction
     prediction = max(prediction, 1)
 
     revenue = prediction * item_mrp
@@ -68,12 +94,13 @@ if st.button("🚀 Run Forecast & Inventory Check"):
     # =========================
     # UNCERTAINTY MODEL
     # =========================
-    demand_std = prediction * 0.25
+    demand_std = prediction * 0.20
+
     lower = prediction - demand_std
     upper = prediction + demand_std
 
     # =========================
-    # SAFE STOCK GENERATION (FIXED)
+    # SAFE STOCK RANGE
     # =========================
     base_pred = max(prediction, 50)
 
@@ -83,12 +110,19 @@ if st.button("🚀 Run Forecast & Inventory Check"):
     if low_stock >= high_stock:
         high_stock = low_stock + 10
 
-    current_stock = np.random.randint(low_stock, high_stock)
+    # =========================
+    # STOCK ENGINE (TOGGLE MODE)
+    # =========================
+    if mode == "Deterministic (Production)":
+        current_stock = int(base_pred * 1.2)
+
+    else:
+        np.random.seed(int(base_pred * 10))
+        current_stock = np.random.randint(low_stock, high_stock)
 
     # =========================
-    # INVENTORY ENGINE
+    # INVENTORY LOGIC
     # =========================
-
     lead_time_days = 7
 
     expected_demand_lt = (prediction / 30) * lead_time_days
@@ -102,9 +136,8 @@ if st.button("🚀 Run Forecast & Inventory Check"):
     stock_gap = current_stock - expected_demand_lt
 
     # =========================
-    # DECISION ENGINE (FIXED)
+    # DECISION ENGINE
     # =========================
-
     if coverage_ratio < 1:
         status = "🔴 STOCKOUT RISK (NOT OPTIMAL)"
         risk = "HIGH"
@@ -121,6 +154,21 @@ if st.button("🚀 Run Forecast & Inventory Check"):
         color = "#10B981"
 
     # =========================
+    # SAVE TO DATABASE
+    # =========================
+    cursor.execute("""
+        INSERT INTO inventory (item_mrp, prediction, stock, mode, timestamp)
+        VALUES (?, ?, ?, ?, ?)
+    """, (
+        float(item_mrp),
+        float(prediction),
+        int(current_stock),
+        mode,
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ))
+    conn.commit()
+
+    # =========================
     # KPI DASHBOARD
     # =========================
     st.subheader("📊 Forecast Results")
@@ -135,9 +183,9 @@ if st.button("🚀 Run Forecast & Inventory Check"):
     st.divider()
 
     # =========================
-    # INVENTORY DASHBOARD
+    # INVENTORY METRICS
     # =========================
-    st.subheader("📦 Inventory Intelligence Engine")
+    st.subheader("📦 Inventory Intelligence")
 
     i1, i2, i3 = st.columns(3)
 
@@ -165,7 +213,7 @@ if st.button("🚀 Run Forecast & Inventory Check"):
     # =========================
     # VISUALIZATION
     # =========================
-    st.subheader("📈 Feature Impact View")
+    st.subheader("📈 Feature Impact")
 
     fig = px.bar(
         x=["MRP", "Visibility", "Weight"],
@@ -174,3 +222,13 @@ if st.button("🚀 Run Forecast & Inventory Check"):
     )
 
     st.plotly_chart(fig, use_container_width=True)
+
+# =========================
+# HISTORY VIEW
+# =========================
+st.divider()
+
+st.subheader("📊 Prediction History")
+
+df = pd.read_sql("SELECT * FROM inventory ORDER BY id DESC", conn)
+st.dataframe(df, use_container_width=True)
