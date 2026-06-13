@@ -20,17 +20,13 @@ model = joblib.load("best_model.pkl")
 columns = joblib.load("columns.pkl")
 
 # =========================
-# TITLE
+# UI
 # =========================
 st.title("📦 Retail Demand + Inventory Intelligence System")
-st.markdown("AI-powered demand forecasting with real inventory decision engine")
 
 st.divider()
 
-# =========================
-# INPUTS
-# =========================
-st.subheader("🧾 Product Inputs")
+st.subheader("🧾 Input Features")
 
 item_mrp = st.slider("Item MRP", 10.0, 300.0, 150.0)
 item_visibility = st.slider("Item Visibility", 0.0, 0.3, 0.05)
@@ -39,9 +35,9 @@ item_weight = st.slider("Item Weight", 1.0, 30.0, 10.0)
 st.divider()
 
 # =========================
-# PREDICTION ENGINE
+# PREDICTION BUTTON
 # =========================
-if st.button("🚀 Predict & Analyze Inventory"):
+if st.button("🚀 Run Forecast & Inventory Check"):
 
     # -------------------------
     # INPUT PREP
@@ -60,53 +56,61 @@ if st.button("🚀 Predict & Analyze Inventory"):
     # -------------------------
     prediction = model.predict(input_encoded)[0]
 
+    # =========================
+    # BUSINESS METRICS
+    # =========================
     revenue = prediction * item_mrp
 
-    # uncertainty band
-    demand_std = prediction * 0.20
+    # uncertainty simulation
+    demand_std = prediction * 0.25
+
     lower = prediction - demand_std
     upper = prediction + demand_std
 
     # =========================
-    # INVENTORY SIMULATION
+    # REALISTIC INVENTORY ENGINE
     # =========================
 
     lead_time_days = 7
 
-    # realistic stock simulation
+    # simulate current stock (real-world constraint)
     current_stock = np.random.randint(
-        max(50, int(prediction * 0.3)),
+        int(prediction * 0.5),
         int(prediction * 1.8)
     )
 
-    # demand during lead time
-    expected_demand_lt = (prediction / 30) * lead_time_days
+    # expected demand during lead time
+    daily_demand = prediction / 30
+    expected_demand_lt = daily_demand * lead_time_days
 
-    # safety buffer
-    safety_stock = 1.65 * demand_std
-
-    # coverage ratio (CORE METRIC)
-    coverage_ratio = current_stock / expected_demand_lt
+    # safety stock (uncertainty buffer)
+    safety_stock = 1.65 * np.std([lower, prediction, upper])
 
     # reorder point
     reorder_point = expected_demand_lt + safety_stock
 
+    # inventory gap
+    stock_gap = current_stock - expected_demand_lt
+
+    # coverage ratio
+    coverage_ratio = current_stock / expected_demand_lt
+
     # =========================
-    # FINAL DECISION ENGINE (FIXED)
+    # DECISION ENGINE
     # =========================
 
-    if coverage_ratio < 1:
-        status = "🔴 STOCKOUT RISK (NOT OPTIMAL)"
+    if stock_gap < 0:
+        status = "🔴 CRITICAL STOCKOUT RISK"
         risk = "HIGH"
         color = "#EF4444"
 
-    elif coverage_ratio > 2.5:
-        status = "🟠 OVERSTOCK RISK (NOT OPTIMAL)"
+    elif coverage_ratio < 1.2:
+        status = "🟡 LOW STOCK - REPLENISH SOON"
         risk = "MEDIUM"
         color = "#F59E0B"
 
     else:
-        status = "🟢 OPTIMAL STOCK LEVEL"
+        status = "🟢 STOCK LEVEL OPTIMAL"
         risk = "LOW"
         color = "#10B981"
 
@@ -120,20 +124,20 @@ if st.button("🚀 Predict & Analyze Inventory"):
     c1.metric("📦 Predicted Demand", f"{prediction:.0f}")
     c2.metric("💰 Revenue", f"₹ {revenue:,.0f}")
     c3.metric("📦 Current Stock", f"{current_stock}")
-    c4.metric("⚠️ Risk Level", risk)
+    c4.metric("⚠️ Risk", risk)
 
     st.divider()
 
     # =========================
-    # INVENTORY METRICS
+    # INVENTORY INTELLIGENCE
     # =========================
     st.subheader("📦 Inventory Intelligence Engine")
 
     i1, i2, i3 = st.columns(3)
 
-    i1.metric("📍 Coverage Ratio", f"{coverage_ratio:.2f}")
+    i1.metric("📍 Reorder Point", f"{reorder_point:.0f}")
     i2.metric("📉 Expected Demand (7D)", f"{expected_demand_lt:.0f}")
-    i3.metric("📦 Reorder Point", f"{reorder_point:.0f}")
+    i3.metric("📊 Coverage Ratio", f"{coverage_ratio:.2f}")
 
     st.markdown(
         f"""
