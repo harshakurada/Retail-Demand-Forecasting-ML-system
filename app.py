@@ -3,6 +3,21 @@ import pandas as pd
 import numpy as np
 import joblib
 import plotly.express as px
+def kpi_card(title, value, subtitle="", color="#4CAF50"):
+    st.markdown(f"""
+    <div style="
+        background-color: #111827;
+        padding: 20px;
+        border-radius: 12px;
+        border-left: 6px solid {color};
+        box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+        margin-bottom: 10px;
+    ">
+        <h4 style="color: #9CA3AF; margin:0;">{title}</h4>
+        <h2 style="color: white; margin:5px 0;">{value}</h2>
+        <p style="color: #6B7280; margin:0;">{subtitle}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # =========================
 # PAGE CONFIG
@@ -78,17 +93,43 @@ if mode == "Single Prediction":
             stock = "HIGH STOCK REQUIRED 📈"
 
         # KPI ROW
-        col1, col2, col3 = st.columns(3)
+st.subheader("📊 Business Performance Dashboard")
 
-        col1.metric("📊 Predicted Sales", f"{prediction:.2f}")
-        col2.metric("🏆 Model", "Gradient Boosting")
-        col3.metric("📉 RMSE", "1035")
-        col4 = st.columns(1)[0]
-        col4.metric("💰 Revenue Impact", f"₹ {revenue:,.0f}")
+col1, col2 = st.columns(2)
 
-        st.success(f"Predicted Sales: {prediction:.2f} units")
+with col1:
+    kpi_card(
+        "📦 Predicted Sales",
+        f"{prediction:.2f}",
+        "AI Forecast Output",
+        "#3B82F6"
+    )
 
-        st.divider()
+with col2:
+    kpi_card(
+        "💰 Revenue Impact",
+        f"₹ {revenue:,.0f}",
+        "Estimated Business Value",
+        "#10B981"
+    )
+
+col3, col4 = st.columns(2)
+
+with col3:
+    kpi_card(
+        "📉 Min Demand",
+        f"{lower_bound:.0f}",
+        "Conservative Estimate",
+        "#F59E0B"
+    )
+
+with col4:
+    kpi_card(
+        "📈 Max Demand",
+        f"{upper_bound:.0f}",
+        "Optimistic Estimate",
+        "#EF4444"
+    )
 
         # Feature impact visualization
         st.subheader("📈 Feature Influence View")
