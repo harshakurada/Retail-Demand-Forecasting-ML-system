@@ -30,7 +30,7 @@ page = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.info("End-to-End Retail Demand Forecasting System")
+st.sidebar.info("AI-powered Retail Demand + Inventory Optimization System")
 
 # =========================
 # HOME PAGE
@@ -38,7 +38,7 @@ st.sidebar.info("End-to-End Retail Demand Forecasting System")
 if page == "🏠 Dashboard":
 
     st.title("📦 Retail Intelligence SaaS Platform")
-    st.markdown("### AI-powered Demand Forecasting System")
+    st.markdown("### AI Demand Forecasting + Inventory Optimization System")
 
     st.divider()
 
@@ -46,9 +46,9 @@ if page == "🏠 Dashboard":
 
     col1.metric("🤖 Model", "Gradient Boosting")
     col2.metric("⚡ Status", "Active")
-    col3.metric("📊 Type", "Regression AI")
+    col3.metric("📊 System", "Production Mode")
 
-    st.success("Use the sidebar to start predictions and analysis.")
+    st.success("Use sidebar to generate predictions and inventory insights.")
 
 # =========================
 # PREDICTION PAGE
@@ -56,14 +56,14 @@ if page == "🏠 Dashboard":
 elif page == "📦 Predict Sales":
 
     st.title("📦 Sales Prediction Engine")
-    st.markdown("### Smart Retail Demand Forecasting")
+    st.markdown("### AI-Based Demand Forecasting System")
 
     st.divider()
 
     # -------------------------
-    # INPUT SECTION
+    # INPUTS
     # -------------------------
-    st.subheader("🧾 Input Configuration")
+    st.subheader("🧾 Product Inputs")
 
     colA, colB = st.columns([1, 2])
 
@@ -73,14 +73,12 @@ elif page == "📦 Predict Sales":
         item_weight = st.slider("Item Weight", 1.0, 30.0, 10.0)
 
     with colB:
-        st.markdown("### 📊 Input Overview")
+        st.markdown("### Input Overview")
 
-        input_df = pd.DataFrame({
+        st.dataframe(pd.DataFrame({
             "Feature": ["MRP", "Visibility", "Weight"],
             "Value": [item_mrp, item_visibility, item_weight]
-        })
-
-        st.dataframe(input_df, use_container_width=True)
+        }), use_container_width=True)
 
     st.divider()
 
@@ -89,75 +87,107 @@ elif page == "📦 Predict Sales":
     # -------------------------
     if st.button("🚀 Predict Demand"):
 
-        input_dict = {
+        input_df = pd.DataFrame([{
             "Item_MRP": item_mrp,
             "Item_Visibility": item_visibility,
             "Item_Weight": item_weight
-        }
-
-        input_df = pd.DataFrame([input_dict])
+        }])
 
         input_encoded = pd.get_dummies(input_df)
         input_encoded = input_encoded.reindex(columns=columns, fill_value=0)
 
         prediction = model.predict(input_encoded)[0]
 
-        # Business metrics
+        # =========================
+        # BUSINESS KPIs
+        # =========================
         revenue = prediction * item_mrp
         lower = prediction * 0.85
         upper = prediction * 1.15
 
-        if prediction < 1000:
-            stock = "🔴 LOW STOCK ALERT"
+        # =========================
+        # INDUSTRY INVENTORY MODEL
+        # =========================
+
+        lead_time_days = 7
+        service_level = 1.65  # ~95% confidence
+
+        demand_std = prediction * 0.25
+        avg_daily_demand = prediction / 30
+
+        lead_time_demand = avg_daily_demand * lead_time_days
+        safety_stock = service_level * demand_std
+
+        reorder_point = lead_time_demand + safety_stock
+        recommended_stock = lead_time_demand + (1.5 * safety_stock)
+
+        # =========================
+        # STOCK DECISION ENGINE
+        # =========================
+        if prediction < reorder_point:
+            stock_status = "🔴 RESTOCK IMMEDIATELY"
+            risk = "HIGH STOCKOUT RISK"
             color = "#EF4444"
-        elif prediction < 2500:
-            stock = "🟡 MODERATE STOCK"
+        elif prediction < recommended_stock:
+            stock_status = "🟡 MONITOR & REPLENISH SOON"
+            risk = "MEDIUM RISK"
             color = "#F59E0B"
         else:
-            stock = "🟢 HIGH STOCK REQUIRED"
+            stock_status = "🟢 STOCK LEVEL HEALTHY"
+            risk = "LOW RISK"
             color = "#10B981"
 
-        # -------------------------
+        # =========================
         # KPI DASHBOARD
-        # -------------------------
+        # =========================
         st.subheader("📊 Prediction Results")
 
         k1, k2, k3, k4 = st.columns(4)
 
-        k1.metric("📦 Sales", f"{prediction:.0f}")
+        k1.metric("📦 Predicted Sales", f"{prediction:.0f}")
         k2.metric("💰 Revenue", f"₹ {revenue:,.0f}")
         k3.metric("📉 Min Demand", f"{lower:.0f}")
         k4.metric("📈 Max Demand", f"{upper:.0f}")
 
         st.divider()
 
-        # -------------------------
-        # STOCK CARD
-        # -------------------------
-        st.markdown(f"""
-        <div style="
-            padding:20px;
-            border-radius:15px;
-            background-color:#111827;
-            border-left:6px solid {color};
-        ">
-            <h3 style="color:white;">📦 Inventory Recommendation</h3>
-            <h2 style="color:{color};">{stock}</h2>
-            <p style="color:#9CA3AF;">AI-based demand-driven decision</p>
-        </div>
-        """, unsafe_allow_html=True)
+        # =========================
+        # INVENTORY DASHBOARD
+        # =========================
+        st.subheader("📦 Inventory Intelligence System")
+
+        c1, c2, c3 = st.columns(3)
+
+        c1.metric("📍 Reorder Point", f"{reorder_point:.0f}")
+        c2.metric("📦 Recommended Stock", f"{recommended_stock:.0f}")
+        c3.metric("⚠️ Risk Level", risk)
+
+        st.markdown(
+            f"""
+            <div style="
+                padding:20px;
+                border-radius:12px;
+                background-color:#111827;
+                border-left:6px solid {color};
+            ">
+                <h3 style="color:white;">Inventory Decision</h3>
+                <h2 style="color:{color};">{stock_status}</h2>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
         st.divider()
 
-        # -------------------------
+        # =========================
         # VISUALIZATION
-        # -------------------------
-        st.subheader("📈 Feature Impact View")
+        # =========================
+        st.subheader("📈 Feature Impact Analysis")
 
         fig = px.bar(
             x=["MRP", "Visibility", "Weight"],
             y=[item_mrp, item_visibility * 1000, item_weight],
-            title="Feature Contribution Analysis"
+            title="Feature Contribution View"
         )
 
         st.plotly_chart(fig, use_container_width=True)
@@ -169,17 +199,17 @@ elif page == "📊 Insights":
 
     st.title("📊 Business Insights")
 
-    st.markdown("### Key Retail Analytics")
+    st.markdown("### Retail Analytics Overview")
 
     col1, col2 = st.columns(2)
 
-    col1.info("📦 MRP strongly influences revenue and demand")
-    col2.info("👁️ Visibility increases purchase probability")
+    col1.info("📦 Demand depends heavily on MRP and visibility")
+    col2.info("📊 Inventory optimization reduces stockout risk")
 
     col3, col4 = st.columns(2)
 
-    col3.success("📊 Ensemble models perform best in retail forecasting")
-    col4.warning("📦 Inventory planning depends on demand prediction")
+    col3.success("🤖 Ensemble models perform best in retail forecasting")
+    col4.warning("📦 Safety stock improves supply chain reliability")
 
     st.divider()
 
@@ -188,16 +218,11 @@ elif page == "📊 Insights":
     days = np.arange(1, 31)
     sales = np.random.randint(1500, 3000, 30)
 
-    trend_df = pd.DataFrame({
-        "Day": days,
-        "Sales": sales
-    })
-
-    fig = px.line(trend_df, x="Day", y="Sales", markers=True)
+    fig = px.line(x=days, y=sales, markers=True)
     st.plotly_chart(fig, use_container_width=True)
 
 # =========================
 # FOOTER
 # =========================
 st.markdown("---")
-st.markdown("🚀 Retail Intelligence SaaS | ML + Business Analytics Dashboard")
+st.markdown("🚀 Retail Intelligence SaaS | ML + Inventory Optimization System")
