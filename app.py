@@ -239,11 +239,11 @@ except:
 
 def html(markup):
     # Flatten indented HTML so Streamlit's markdown parser doesn't treat it as a code block
-    st.markdown("".join(line.strip() for line in markup.splitlines()), unsafe_allow_html=True)
+    st.markdown(" ".join(line.strip() for line in markup.splitlines()), unsafe_allow_html=True)
 
 
 def kpi_card(label, value, hint="", accent="#6366F1", compact=False):
-    return "".join(line.strip() for line in f"""
+    return " ".join(line.strip() for line in f"""
     <div class="kpi{' compact' if compact else ''}" style="--kpi-accent:{accent};">
         <div class="kpi-label">{label}</div>
         <div class="kpi-value">{value}</div>
